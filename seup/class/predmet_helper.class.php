@@ -667,9 +667,10 @@ class Predmet_helper
                 $documentTableHTML .= '<td>';
                 if (!empty($doc->digital_signature)) {
                     $signatureBadge = Digital_Signature_Detector::getSignatureBadge(
-                        true, 
+                        true,
                         $doc->signature_status ?? 'unknown',
-                        $doc->signer_name ?? null
+                        $doc->signer_name ?? null,
+                        $doc->signature_date ?? null
                     );
                     $documentTableHTML .= $signatureBadge;
                 } else {

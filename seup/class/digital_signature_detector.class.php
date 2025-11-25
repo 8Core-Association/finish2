@@ -463,7 +463,7 @@ class Digital_Signature_Detector
     /**
      * Get signature badge HTML for document list
      */
-    public static function getSignatureBadge($hasSignature, $signatureStatus = 'unknown', $signerName = null)
+    public static function getSignatureBadge($hasSignature, $signatureStatus = 'unknown', $signerName = null, $signatureDate = null)
     {
         if (!$hasSignature) {
             return '<span class="seup-signature-none"><i class="fas fa-minus-circle"></i> Nije potpisan</span>';
@@ -483,6 +483,10 @@ class Digital_Signature_Detector
                 if ($signerName) {
                     $title .= ' - ' . $signerName;
                     $text = 'Potpisan - ' . $signerName;
+                }
+                if ($signatureDate) {
+                    $formattedDate = date('d.m.Y H:i', strtotime($signatureDate));
+                    $title .= ' (Potpisan: ' . $formattedDate . ')';
                 }
                 break;
             case 'invalid':
