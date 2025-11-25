@@ -1,0 +1,449 @@
+/**
+ * Predmet Sortiranje Specific Styles
+ * (c) 2025 8Core Association
+ */
+
+/* Sortiranje Modal Styles */
+.seup-sortiranje-modal .seup-modal-content {
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+}
+
+.seup-sortiranje-modal .seup-modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+/* Sortiranje Header */
+.seup-sortiranje-header {
+  background: var(--warning-50);
+  border: 1px solid var(--warning-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.seup-sortiranje-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--warning-500);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.seup-sortiranje-info h4 {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--warning-800);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.seup-sortiranje-info p {
+  margin: 0;
+  color: var(--warning-700);
+  font-size: var(--text-sm);
+}
+
+/* Documents List */
+.seup-nedodjeljeni-list {
+  background: white;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.seup-nedodjeljeni-header {
+  background: linear-gradient(135deg, var(--secondary-500), var(--secondary-600));
+  color: white;
+  padding: var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.seup-nedodjeljeni-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seup-select-all-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seup-select-all-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: white;
+}
+
+.seup-select-all-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+}
+
+/* Document Items */
+.seup-document-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--neutral-100);
+  transition: all var(--transition-fast);
+}
+
+.seup-document-item:last-child {
+  border-bottom: none;
+}
+
+.seup-document-item:hover {
+  background: var(--primary-25);
+}
+
+.seup-document-item.selected {
+  background: var(--primary-50);
+  border-left: 4px solid var(--primary-500);
+}
+
+/* Document Checkbox */
+.seup-document-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-500);
+  cursor: pointer;
+}
+
+/* Document Info */
+.seup-document-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.seup-document-file-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.seup-document-file-icon.pdf {
+  background: var(--error-100);
+  color: var(--error-700);
+}
+
+.seup-document-file-icon.doc {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+.seup-document-file-icon.xls {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.seup-document-file-icon.img {
+  background: var(--accent-100);
+  color: var(--accent-700);
+}
+
+.seup-document-file-icon.default {
+  background: var(--neutral-100);
+  color: var(--neutral-600);
+}
+
+.seup-document-details {
+  flex: 1;
+}
+
+.seup-document-filename {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--secondary-900);
+  margin-bottom: var(--space-1);
+}
+
+.seup-document-meta {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--secondary-600);
+}
+
+.seup-document-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Assignment Controls */
+.seup-assignment-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 200px;
+}
+
+.seup-assignment-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  background: white;
+}
+
+.seup-assignment-select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.seup-akt-select {
+  display: none;
+  margin-top: var(--space-2);
+}
+
+.seup-akt-select.show {
+  display: block;
+}
+
+/* Action Buttons */
+.seup-sortiranje-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border-top: 1px solid var(--neutral-200);
+}
+
+.seup-bulk-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.seup-btn-bulk {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+}
+
+.seup-btn-auto-akt {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.seup-btn-auto-akt:hover {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.seup-btn-auto-prilog {
+  background: linear-gradient(135deg, var(--success-500), var(--success-600));
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.seup-btn-auto-prilog:hover {
+  background: linear-gradient(135deg, var(--success-600), var(--success-700));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Selection Summary */
+.seup-selection-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--secondary-700);
+}
+
+.seup-selection-count {
+  background: var(--primary-100);
+  color: var(--primary-800);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-semibold);
+}
+
+/* Empty State */
+.seup-nedodjeljeni-empty {
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--success-50);
+  border: 1px solid var(--success-200);
+  border-radius: var(--radius-lg);
+}
+
+.seup-empty-success-icon {
+  font-size: 3rem;
+  color: var(--success-500);
+  margin-bottom: var(--space-4);
+}
+
+.seup-empty-success-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--success-800);
+  margin-bottom: var(--space-2);
+}
+
+.seup-empty-success-description {
+  font-size: var(--text-sm);
+  color: var(--success-700);
+  margin: 0;
+}
+
+/* Loading States */
+.seup-sortiranje-loading {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.seup-loading-spinner {
+  font-size: 2rem;
+  color: var(--primary-500);
+  margin-bottom: var(--space-4);
+  animation: spin 1s linear infinite;
+}
+
+.seup-loading-text {
+  font-size: var(--text-base);
+  color: var(--secondary-700);
+  font-weight: var(--font-medium);
+}
+
+/* Progress Indicator */
+.seup-sortiranje-progress {
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  display: none;
+}
+
+.seup-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--primary-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.seup-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  width: 0%;
+  transition: width var(--transition-normal);
+}
+
+.seup-progress-text {
+  font-size: var(--text-sm);
+  color: var(--primary-700);
+  text-align: center;
+  font-weight: var(--font-medium);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .seup-sortiranje-modal .seup-modal-content {
+    width: 98%;
+    margin: var(--space-2);
+  }
+  
+  .seup-document-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  
+  .seup-assignment-controls {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .seup-sortiranje-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .seup-bulk-actions {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .seup-document-meta {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  
+  .seup-bulk-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .seup-btn-bulk {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Animation keyframes */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Document item animation */
+.seup-document-item.new-item {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Selection animation */
+.seup-document-item.selecting {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-md);
+}

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module>
+    <!-- VAŽNO: uskladi <number> s brojem modula u modSEUP.class.php ako je već definiran -->
+    <name>seup</name>
+    <number>104000</number>
+
+    <version>3.0.1</version>
+    <date>20251115</date>
+
+    <description>SEUP - Sustav elektroničkog uredskog poslovanja</description>
+    <descriptionlong>Sustav elektroničkog uredskog poslovanja (SEUP) za upravljanje predmetima, aktima i dokumentima uz DMS funkcionalnosti.</descriptionlong>
+
+    <family>ECM</family>
+    <picto>seup@seup</picto>
+
+    <editor_name>8Core Association</editor_name>
+    <editor_url>https://8core.hr</editor_url>
+    <url>https://8core.hr</url>
+
+    <langfiles>seup@seup</langfiles>
+
+    <depends></depends>
+    <requiredby></requiredby>
+
+    <phpmin>7.4.0</phpmin>
+    <phpmax></phpmax>
+
+    <dolibarrmin>22.0.0</dolibarrmin>
+    <dolibarrmax></dolibarrmax>
+
+    <os>all</os>
+    <db>mysqli,mysql</db>
+</module>
