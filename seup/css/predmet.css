@@ -500,7 +500,7 @@
   color: var(--secondary-900);
   word-break: break-all;
   overflow-wrap: break-word;
-  max-width: 35ch;
+  max-width: 55ch;
 }
 
 .seup-document-date {
