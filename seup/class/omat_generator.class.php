@@ -156,24 +156,26 @@ class Omat_Generator
                     $obj->prilog_rbr = $prilog->prilog_rbr;
                 }
 
-                $sql_zap = "SELECT datum_zaprimanja, posiljatelj_naziv
-                           FROM " . MAIN_DB_PREFIX . "a_zaprimanja
-                           WHERE fk_ecm_file = " . (int)$ecm_id . "
-                           ORDER BY datum_zaprimanja DESC LIMIT 1";
+                $sql_zap = "SELECT zap.datum_zaprimanja, zap.posiljatelj_naziv
+                           FROM a_zaprimanja zap
+                           WHERE zap.fk_ecm_file = " . (int)$ecm_id . "
+                           ORDER BY zap.datum_zaprimanja DESC LIMIT 1";
                 $res_zap = $this->db->query($sql_zap);
                 if ($res_zap && $zap = $this->db->fetch_object($res_zap)) {
                     $obj->datum_zaprimanja = $zap->datum_zaprimanja;
                     $obj->posiljatelj_naziv = $zap->posiljatelj_naziv;
                 }
 
-                $sql_otp = "SELECT datum_otpreme, primatelj_naziv
-                           FROM " . MAIN_DB_PREFIX . "a_otprema
-                           WHERE fk_ecm_file = " . (int)$ecm_id . "
-                           ORDER BY datum_otpreme DESC LIMIT 1";
+                $sql_otp = "SELECT o.datum_otpreme, o.primatelj_naziv
+                           FROM " . MAIN_DB_PREFIX . "a_otprema o
+                           WHERE o.fk_ecm_file = " . (int)$ecm_id . "
+                           ORDER BY o.datum_otpreme DESC LIMIT 1";
                 $res_otp = $this->db->query($sql_otp);
                 if ($res_otp && $otp = $this->db->fetch_object($res_otp)) {
                     $obj->datum_otpreme = $otp->datum_otpreme;
                     $obj->primatelj_naziv = $otp->primatelj_naziv;
+                } else if (!$res_otp) {
+                    dol_syslog("Otprema query error: " . $this->db->lasterror(), LOG_ERR);
                 }
 
                 $attachments[] = $obj;
