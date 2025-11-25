@@ -498,6 +498,9 @@
 .seup-document-name {
   font-weight: var(--font-medium);
   color: var(--secondary-900);
+  word-break: break-all;
+  overflow-wrap: break-word;
+  max-width: 25ch;
 }
 
 .seup-document-date {
