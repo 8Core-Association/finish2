@@ -516,7 +516,7 @@ class Predmet_helper
             $documentTableHTML .= '<tr>';
             $documentTableHTML .= '<th style="width: 40px;"><input type="checkbox" id="selectAllDocs" title="Označi sve"></th>';
             $documentTableHTML .= '<th><i class="fas fa-hashtag me-2"></i>&nbsp;Urb.</th>';
-            $documentTableHTML .= '<th><i class="fas fa-file me-2"></i>&nbsp;Naziv datoteke</th>';
+            $documentTableHTML .= '<th style="width: 25%;"><i class="fas fa-file me-2"></i>&nbsp;Naziv datoteke</th>';
             $documentTableHTML .= '<th style="width: 60px; text-align: center;"><i class="fas fa-inbox me-2"></i>&nbsp;Zap</th>';
             $documentTableHTML .= '<th><i class="fas fa-calendar me-2"></i>&nbsp;Datum</th>';
             $documentTableHTML .= '<th><i class="fas fa-user me-2"></i>&nbsp;Kreirao</th>';
