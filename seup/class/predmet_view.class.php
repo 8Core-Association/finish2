@@ -409,6 +409,7 @@ class Predmet_View
         self::printPrilogUploadModal($caseId, $availableAkti);
         self::printRegistrirajOtpremuModal($caseId);
         self::printZaprimiDokumentModal($caseId, $availableAkti);
+        self::printZaprimanjeDetailsModal();
     }
 
     private static function printOmotPreviewModal()
@@ -828,6 +829,21 @@ class Predmet_View
         print '<button type="button" class="seup-btn seup-btn-primary" id="submitZaprimanjeBtn">';
         print '<i class="fas fa-save me-2"></i>Zaprimi Dokument';
         print '</button>';
+        print '</div>';
+        print '</div>';
+        print '</div>';
+    }
+
+    private static function printZaprimanjeDetailsModal()
+    {
+        print '<div class="seup-modal" id="zaprimanjeDetailsModal">';
+        print '<div class="seup-modal-content" style="max-width: 600px;">';
+        print '<div class="seup-modal-header">';
+        print '<h5 class="seup-modal-title"><i class="fas fa-inbox me-2"></i>Detalji Zaprimanja</h5>';
+        print '<button type="button" class="seup-modal-close" id="closeZaprimanjeDetailsModal">&times;</button>';
+        print '</div>';
+        print '<div class="seup-modal-body" id="zaprimanjeDetailsContent">';
+        print '<div class="seup-loading"><i class="fas fa-spinner fa-spin"></i> Učitavam...</div>';
         print '</div>';
         print '</div>';
         print '</div>';

@@ -136,6 +136,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'bulk_otprema':
             Predmet_Action_Handler::handleBulkOtprema($db, $conf, $user);
             break;
+
+        case 'get_zaprimanje_details':
+            require_once __DIR__ . '/../class/zaprimanje_helper.class.php';
+            header('Content-Type: application/json');
+            ob_end_clean();
+
+            $zaprimanje_id = GETPOST('zaprimanje_id', 'int');
+
+            if (!$zaprimanje_id) {
+                echo json_encode(['success' => false, 'error' => 'Missing zaprimanje ID']);
+                exit;
+            }
+
+            $zaprimanje = Zaprimanje_Helper::getZaprimanjeById($db, $zaprimanje_id);
+
+            if ($zaprimanje) {
+                echo json_encode([
+                    'success' => true,
+                    'data' => $zaprimanje
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Zaprimanje not found']);
+            }
+            exit;
     }
 }
 

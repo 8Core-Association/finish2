@@ -1001,4 +1001,140 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('pdfPreviewFrame').src = '';
         }
     }
+
+    // Zaprimanje Details Modal
+    const zapIndicators = document.querySelectorAll('.seup-zap-indicator');
+    const zapDetailsModal = document.getElementById('zaprimanjeDetailsModal');
+    const closeZapDetailsBtn = document.getElementById('closeZaprimanjeDetailsModal');
+    const zapDetailsContent = document.getElementById('zaprimanjeDetailsContent');
+
+    if (zapIndicators) {
+        zapIndicators.forEach(indicator => {
+            indicator.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const zaprimanjeId = this.dataset.zaprimanjeId;
+                openZaprimanjeDetailsModal(zaprimanjeId);
+            });
+        });
+    }
+
+    if (closeZapDetailsBtn) {
+        closeZapDetailsBtn.addEventListener('click', closeZaprimanjeDetailsModal);
+    }
+
+    if (zapDetailsModal) {
+        zapDetailsModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeZaprimanjeDetailsModal();
+            }
+        });
+    }
+
+    function openZaprimanjeDetailsModal(zaprimanjeId) {
+        if (!zapDetailsModal || !zapDetailsContent) return;
+
+        zapDetailsContent.innerHTML = '<div class="seup-loading"><i class="fas fa-spinner fa-spin"></i> Učitavam...</div>';
+        zapDetailsModal.classList.add('show');
+
+        const formData = new FormData();
+        formData.append('action', 'get_zaprimanje_details');
+        formData.append('zaprimanje_id', zaprimanjeId);
+
+        fetch(window.location.pathname + window.location.search, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const zap = data.data;
+                let html = '<div class="seup-zaprimanje-details-grid">';
+
+                html += '<div class="seup-zaprimanje-detail-field">';
+                html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-calendar"></i> Datum zaprimanja</div>';
+                html += '<div class="seup-zaprimanje-detail-value">' + formatDate(zap.datum_zaprimanja) + '</div>';
+                html += '</div>';
+
+                html += '<div class="seup-zaprimanje-detail-field">';
+                html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-inbox"></i> Način zaprimanja</div>';
+                html += '<div class="seup-zaprimanje-detail-value">' + formatNacinZaprimanja(zap.nacin_zaprimanja) + '</div>';
+                html += '</div>';
+
+                html += '<div class="seup-zaprimanje-detail-field">';
+                html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-user"></i> Pošiljatelj</div>';
+                html += '<div class="seup-zaprimanje-detail-value">' + (zap.posiljatelj_naziv || '—') + '</div>';
+                html += '</div>';
+
+                html += '<div class="seup-zaprimanje-detail-field">';
+                html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-hashtag"></i> Broj pošiljke</div>';
+                html += '<div class="seup-zaprimanje-detail-value">' + (zap.posiljatelj_broj || '—') + '</div>';
+                html += '</div>';
+
+                html += '<div class="seup-zaprimanje-detail-field">';
+                html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-tag"></i> Tip dokumenta</div>';
+                html += '<div class="seup-zaprimanje-detail-value">' + formatTipDokumenta(zap.tip_dokumenta) + '</div>';
+                html += '</div>';
+
+                html += '<div class="seup-zaprimanje-detail-field">';
+                html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-file"></i> Dokument</div>';
+                html += '<div class="seup-zaprimanje-detail-value">' + (zap.doc_filename || '—') + '</div>';
+                html += '</div>';
+
+                html += '</div>';
+
+                if (zap.napomena) {
+                    html += '<div class="seup-zaprimanje-detail-napomena">';
+                    html += '<div class="seup-zaprimanje-detail-label"><i class="fas fa-sticky-note"></i> Napomena</div>';
+                    html += '<div class="seup-zaprimanje-detail-value">' + zap.napomena + '</div>';
+                    html += '</div>';
+                }
+
+                zapDetailsContent.innerHTML = html;
+            } else {
+                zapDetailsContent.innerHTML = '<div class="seup-error">Greška: ' + data.error + '</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            zapDetailsContent.innerHTML = '<div class="seup-error">Došlo je do greške pri učitavanju podataka</div>';
+        });
+    }
+
+    function closeZaprimanjeDetailsModal() {
+        if (zapDetailsModal) {
+            zapDetailsModal.classList.remove('show');
+        }
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function formatNacinZaprimanja(nacin) {
+        const labels = {
+            'posta': 'Pošta',
+            'email': 'E-mail',
+            'rucno': 'Na ruke',
+            'courier': 'Kurirska služba',
+            'fax': 'Fax',
+            'web': 'Web',
+            'sluzben_put': 'Službeni put'
+        };
+        return labels[nacin] || nacin;
+    }
+
+    function formatTipDokumenta(tip) {
+        const labels = {
+            'akt': 'Akt',
+            'prilog': 'Prilog',
+            'nedodjeljeni': 'Nedodijeljeni',
+            'novi_akt': 'Novi akt',
+            'prilog_postojecem': 'Prilog postojećem',
+            'nerazvrstan': 'Nerazvrstan'
+        };
+        return labels[tip] || tip;
+    }
 });
