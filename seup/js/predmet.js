@@ -1137,4 +1137,150 @@ document.addEventListener("DOMContentLoaded", function() {
         };
         return labels[tip] || tip;
     }
+
+    const otpIndicators = document.querySelectorAll('.seup-otp-indicator');
+    const otpDetailsModal = document.getElementById('otpremaDetailsModal');
+    const closeOtpDetailsBtn = document.getElementById('closeOtpremaDetailsModal');
+    const otpDetailsContent = document.getElementById('otpremaDetailsContent');
+
+    if (otpIndicators) {
+        otpIndicators.forEach(indicator => {
+            indicator.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const ecmFileId = this.dataset.ecmFileId;
+                openOtpremaDetailsModal(ecmFileId);
+            });
+        });
+    }
+
+    if (closeOtpDetailsBtn) {
+        closeOtpDetailsBtn.addEventListener('click', closeOtpremaDetailsModal);
+    }
+
+    if (otpDetailsModal) {
+        otpDetailsModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeOtpremaDetailsModal();
+            }
+        });
+    }
+
+    function openOtpremaDetailsModal(ecmFileId) {
+        if (!otpDetailsModal || !otpDetailsContent) return;
+
+        otpDetailsContent.innerHTML = '<div class="seup-loading"><i class="fas fa-spinner fa-spin"></i> Učitavam...</div>';
+        otpDetailsModal.classList.add('show');
+
+        const formData = new FormData();
+        formData.append('action', 'get_otprema_details');
+        formData.append('ecm_file_id', ecmFileId);
+
+        fetch(window.location.pathname + window.location.search, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+                let html = '';
+
+                data.data.forEach((otp, index) => {
+                    if (index > 0) {
+                        html += '<hr class="seup-otprema-separator">';
+                    }
+
+                    html += '<div class="seup-otprema-record">';
+                    html += '<div class="seup-otprema-header">';
+                    html += '<h6 class="seup-otprema-title"><i class="fas fa-paper-plane"></i> Otprema #' + (index + 1) + '</h6>';
+                    html += '</div>';
+
+                    html += '<div class="seup-otprema-details-grid">';
+
+                    html += '<div class="seup-otprema-detail-field">';
+                    html += '<div class="seup-otprema-detail-label"><i class="fas fa-calendar"></i> Datum otpreme</div>';
+                    html += '<div class="seup-otprema-detail-value">' + formatDate(otp.datum_otpreme) + '</div>';
+                    html += '</div>';
+
+                    html += '<div class="seup-otprema-detail-field">';
+                    html += '<div class="seup-otprema-detail-label"><i class="fas fa-shipping-fast"></i> Način otpreme</div>';
+                    html += '<div class="seup-otprema-detail-value">' + formatNacinOtpreme(otp.nacin_otpreme) + '</div>';
+                    html += '</div>';
+
+                    html += '<div class="seup-otprema-detail-field">';
+                    html += '<div class="seup-otprema-detail-label"><i class="fas fa-user"></i> Primatelj</div>';
+                    html += '<div class="seup-otprema-detail-value">' + (otp.primatelj_naziv || '—') + '</div>';
+                    html += '</div>';
+
+                    if (otp.primatelj_adresa) {
+                        html += '<div class="seup-otprema-detail-field">';
+                        html += '<div class="seup-otprema-detail-label"><i class="fas fa-map-marker-alt"></i> Adresa</div>';
+                        html += '<div class="seup-otprema-detail-value">' + otp.primatelj_adresa + '</div>';
+                        html += '</div>';
+                    }
+
+                    if (otp.primatelj_email) {
+                        html += '<div class="seup-otprema-detail-field">';
+                        html += '<div class="seup-otprema-detail-label"><i class="fas fa-envelope"></i> Email</div>';
+                        html += '<div class="seup-otprema-detail-value">' + otp.primatelj_email + '</div>';
+                        html += '</div>';
+                    }
+
+                    if (otp.primatelj_telefon) {
+                        html += '<div class="seup-otprema-detail-field">';
+                        html += '<div class="seup-otprema-detail-label"><i class="fas fa-phone"></i> Telefon</div>';
+                        html += '<div class="seup-otprema-detail-value">' + otp.primatelj_telefon + '</div>';
+                        html += '</div>';
+                    }
+
+                    html += '<div class="seup-otprema-detail-field">';
+                    html += '<div class="seup-otprema-detail-label"><i class="fas fa-tag"></i> Tip dokumenta</div>';
+                    html += '<div class="seup-otprema-detail-value">' + formatTipDokumenta(otp.tip_dokumenta) + '</div>';
+                    html += '</div>';
+
+                    if (otp.klasifikacijska_oznaka) {
+                        html += '<div class="seup-otprema-detail-field">';
+                        html += '<div class="seup-otprema-detail-label"><i class="fas fa-tag"></i> Klasifikacijska oznaka</div>';
+                        html += '<div class="seup-otprema-detail-value">' + otp.klasifikacijska_oznaka + '</div>';
+                        html += '</div>';
+                    }
+
+                    html += '</div>';
+
+                    if (otp.napomena) {
+                        html += '<div class="seup-otprema-detail-napomena">';
+                        html += '<div class="seup-otprema-detail-label"><i class="fas fa-sticky-note"></i> Napomena</div>';
+                        html += '<div class="seup-otprema-detail-value">' + otp.napomena + '</div>';
+                        html += '</div>';
+                    }
+
+                    html += '</div>';
+                });
+
+                otpDetailsContent.innerHTML = html;
+            } else {
+                otpDetailsContent.innerHTML = '<div class="seup-error">Nema podataka o otpremi</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            otpDetailsContent.innerHTML = '<div class="seup-error">Došlo je do greške pri učitavanju podataka</div>';
+        });
+    }
+
+    function closeOtpremaDetailsModal() {
+        if (otpDetailsModal) {
+            otpDetailsModal.classList.remove('show');
+        }
+    }
+
+    function formatNacinOtpreme(nacin) {
+        const labels = {
+            'posta': 'Pošta',
+            'email': 'E-mail',
+            'rucno': 'Na ruke',
+            'ostalo': 'Ostalo'
+        };
+        return labels[nacin] || nacin;
+    }
 });

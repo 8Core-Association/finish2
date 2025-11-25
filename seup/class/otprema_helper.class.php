@@ -110,6 +110,11 @@ class Otprema_Helper
         return $otpreme;
     }
 
+    public static function getOtpremeByEcmFileId($db, $fk_ecm_file)
+    {
+        return self::getOtpremePoDokumentu($db, $fk_ecm_file);
+    }
+
     public static function getOtpremePoPredmetu($db, $ID_predmeta)
     {
         $otpreme = [];

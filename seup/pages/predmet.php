@@ -160,6 +160,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['success' => false, 'error' => 'Zaprimanje not found']);
             }
             exit;
+
+        case 'get_otprema_details':
+            require_once __DIR__ . '/../class/otprema_helper.class.php';
+            header('Content-Type: application/json');
+            ob_end_clean();
+
+            $ecm_file_id = GETPOST('ecm_file_id', 'int');
+
+            if (!$ecm_file_id) {
+                echo json_encode(['success' => false, 'error' => 'Missing ECM file ID']);
+                exit;
+            }
+
+            $otprema_records = Otprema_Helper::getOtpremeByEcmFileId($db, $ecm_file_id);
+
+            if ($otprema_records && count($otprema_records) > 0) {
+                echo json_encode([
+                    'success' => true,
+                    'data' => $otprema_records
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'No otprema records found']);
+            }
+            exit;
     }
 }
 

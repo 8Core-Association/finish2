@@ -518,6 +518,7 @@ class Predmet_helper
             $documentTableHTML .= '<th><i class="fas fa-hashtag me-2"></i>&nbsp;Urb.</th>';
             $documentTableHTML .= '<th style="width: 20%;"><i class="fas fa-file me-2"></i>&nbsp;Naziv datoteke</th>';
             $documentTableHTML .= '<th style="width: 90px; text-align: center;"><i class="fas fa-inbox me-2"></i>&nbsp;Zap</th>';
+            $documentTableHTML .= '<th style="width: 90px; text-align: center;"><i class="fas fa-paper-plane me-2"></i>&nbsp;Otp</th>';
             $documentTableHTML .= '<th><i class="fas fa-calendar me-2"></i>&nbsp;Datum</th>';
             $documentTableHTML .= '<th><i class="fas fa-user me-2"></i>&nbsp;Kreirao</th>';
             $documentTableHTML .= '<th><i class="fas fa-certificate me-2"></i>&nbsp;Potpis</th>';
@@ -626,6 +627,28 @@ class Predmet_helper
                     $documentTableHTML .= '</button>';
                 } else {
                     $documentTableHTML .= '<span class="seup-zap-empty">—</span>';
+                }
+                $documentTableHTML .= '</td>';
+
+                // Otprema column
+                $documentTableHTML .= '<td style="text-align: center;">';
+                // Check if document has otprema records
+                $otprema_count_sql = "SELECT COUNT(*) as count FROM " . MAIN_DB_PREFIX . "a_otprema WHERE fk_ecm_file = " . (int)$doc->rowid;
+                $otprema_count_resql = $db->query($otprema_count_sql);
+                $otprema_count = 0;
+                if ($otprema_count_resql && $otprema_count_obj = $db->fetch_object($otprema_count_resql)) {
+                    $otprema_count = (int)$otprema_count_obj->count;
+                }
+
+                if ($otprema_count > 0) {
+                    $documentTableHTML .= '<button class="seup-otp-indicator" data-ecm-file-id="' . $doc->rowid . '" title="Prikaži otpreme (' . $otprema_count . ')">';
+                    $documentTableHTML .= '<i class="fas fa-check-circle"></i>';
+                    if ($otprema_count > 1) {
+                        $documentTableHTML .= '<span class="seup-otp-count">' . $otprema_count . '</span>';
+                    }
+                    $documentTableHTML .= '</button>';
+                } else {
+                    $documentTableHTML .= '<span class="seup-otp-empty">—</span>';
                 }
                 $documentTableHTML .= '</td>';
 
