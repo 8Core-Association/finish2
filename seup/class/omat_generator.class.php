@@ -126,6 +126,15 @@ class Omat_Generator
     {
         $relative_path = Predmet_helper::getPredmetFolderPath($predmet_id, $this->db);
 
+        dol_syslog("Getting attachments for predmet " . $predmet_id . ", path: " . $relative_path, LOG_DEBUG);
+
+        $test_sql = "SELECT COUNT(*) as cnt FROM " . MAIN_DB_PREFIX . "a_otprema";
+        $test_res = $this->db->query($test_sql);
+        if ($test_res) {
+            $test_obj = $this->db->fetch_object($test_res);
+            dol_syslog("Total records in a_otprema table: " . $test_obj->cnt, LOG_DEBUG);
+        }
+
         $sql = "SELECT
                     ef.filename,
                     ef.date_c,
@@ -166,16 +175,26 @@ class Omat_Generator
                     $obj->posiljatelj_naziv = $zap->posiljatelj_naziv;
                 }
 
+                $obj->datum_otpreme = null;
+                $obj->primatelj_naziv = null;
+
                 $sql_otp = "SELECT o.datum_otpreme, o.primatelj_naziv
                            FROM " . MAIN_DB_PREFIX . "a_otprema o
                            WHERE o.fk_ecm_file = " . (int)$ecm_id . "
                            ORDER BY o.datum_otpreme DESC LIMIT 1";
                 $res_otp = $this->db->query($sql_otp);
-                if ($res_otp && $otp = $this->db->fetch_object($res_otp)) {
-                    $obj->datum_otpreme = $otp->datum_otpreme;
-                    $obj->primatelj_naziv = $otp->primatelj_naziv;
-                } else if (!$res_otp) {
-                    dol_syslog("Otprema query error: " . $this->db->lasterror(), LOG_ERR);
+
+                if (!$res_otp) {
+                    dol_syslog("Otprema query failed for ecm_file " . $ecm_id . ": " . $this->db->lasterror(), LOG_ERR);
+                } else {
+                    $num_otp = $this->db->num_rows($res_otp);
+                    dol_syslog("Otprema query for ecm_file " . $ecm_id . " returned " . $num_otp . " rows", LOG_DEBUG);
+
+                    if ($otp = $this->db->fetch_object($res_otp)) {
+                        $obj->datum_otpreme = $otp->datum_otpreme;
+                        $obj->primatelj_naziv = $otp->primatelj_naziv;
+                        dol_syslog("Otprema found: " . $otp->datum_otpreme . " to " . $otp->primatelj_naziv, LOG_DEBUG);
+                    }
                 }
 
                 $attachments[] = $obj;
