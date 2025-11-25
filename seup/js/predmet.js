@@ -391,11 +391,104 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     function closeDeleteModal() {
-        document.getElementById('deleteDocModal').classList.remove('show');
+        const deleteModal = document.getElementById('deleteDocModal');
+        deleteModal.classList.remove('show');
         currentDeleteData = null;
+
+        delete deleteModal.dataset.bulkMode;
+
+        const modalTitle = deleteModal.querySelector('.seup-modal-title');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-trash me-2"></i>Brisanje Dokumenta';
+        }
+
+        const deleteDocInfo = deleteModal.querySelector('.seup-delete-doc-info');
+        if (deleteDocInfo) {
+            deleteDocInfo.innerHTML = `
+                <div class="seup-delete-doc-icon"><i class="fas fa-file-alt"></i></div>
+                <div class="seup-delete-doc-details">
+                    <div class="seup-delete-doc-name" id="deleteDocName">document.pdf</div>
+                    <div class="seup-delete-doc-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Jeste li sigurni da želite obrisati ovaj dokument? Ova akcija je nepovratna.
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function performBulkDelete(docs) {
+        executeBulkActionBtn.classList.add('seup-loading');
+        executeBulkActionBtn.disabled = true;
+
+        let deletedCount = 0;
+        let errorCount = 0;
+
+        docs.forEach((doc, index) => {
+            const formData = new FormData();
+            formData.append('action', 'delete_document');
+            formData.append('filename', doc.filename);
+            formData.append('filepath', doc.filepath);
+
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    deletedCount++;
+                    const row = document.querySelector(`tr[data-doc-id="${doc.id}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                } else {
+                    errorCount++;
+                }
+
+                if (deletedCount + errorCount === docs.length) {
+                    executeBulkActionBtn.classList.remove('seup-loading');
+                    executeBulkActionBtn.disabled = false;
+
+                    if (errorCount === 0) {
+                        showMessage(`Uspješno obrisano ${deletedCount} dokumenata`, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showMessage(`Obrisano ${deletedCount} dokumenata, greška kod ${errorCount}`, 'warning');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting document:', error);
+                errorCount++;
+
+                if (deletedCount + errorCount === docs.length) {
+                    executeBulkActionBtn.classList.remove('seup-loading');
+                    executeBulkActionBtn.disabled = false;
+                    showMessage('Greška pri brisanju dokumenata', 'error');
+                }
+            });
+        });
     }
 
     function confirmDelete() {
+        const deleteModal = document.getElementById('deleteDocModal');
+
+        if (deleteModal.dataset.bulkMode === 'true') {
+            const docs = window.bulkDeleteDocs;
+            if (!docs || docs.length === 0) return;
+
+            closeDeleteModal();
+            delete deleteModal.dataset.bulkMode;
+            performBulkDelete(docs);
+            return;
+        }
+
         if (!currentDeleteData) return;
 
         const confirmBtn = document.getElementById('confirmDeleteBtn');
@@ -796,68 +889,40 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function bulkDelete(docs) {
-        if (!confirm(`Jeste li sigurni da želite obrisati ${docs.length} dokumenata?\n\nOva akcija je nepovratna!`)) {
+        const deleteModal = document.getElementById('deleteDocModal');
+        if (!deleteModal) {
+            showMessage('Modal nije pronađen', 'error');
             return;
         }
 
-        executeBulkActionBtn.classList.add('seup-loading');
-        executeBulkActionBtn.disabled = true;
+        window.bulkDeleteDocs = docs;
 
-        let deletedCount = 0;
-        let errorCount = 0;
+        const modalTitle = deleteModal.querySelector('.seup-modal-title');
+        if (modalTitle) {
+            modalTitle.innerHTML = `<i class="fas fa-trash me-2"></i>Brisanje ${docs.length} Dokumenata`;
+        }
 
-        docs.forEach((doc, index) => {
-            const formData = new FormData();
-            formData.append('action', 'delete_document');
-            formData.append('filename', doc.filename);
-            formData.append('filepath', doc.filepath);
+        const deleteDocInfo = deleteModal.querySelector('.seup-delete-doc-info');
+        if (deleteDocInfo) {
+            deleteDocInfo.innerHTML = `
+                <div class="seup-delete-doc-icon"><i class="fas fa-file-alt"></i></div>
+                <div class="seup-delete-doc-details">
+                    <div class="seup-delete-doc-name">Označeni dokumenti za brisanje:</div>
+                    <div class="seup-bulk-doc-list" style="margin: 10px 0; padding: 10px; background: #fef2f2; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+                        <ul style="margin: 5px 0; padding-left: 20px; list-style: disc;">
+                            ${docs.map(d => '<li>' + d.filename + '</li>').join('')}
+                        </ul>
+                    </div>
+                    <div class="seup-delete-doc-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Jeste li sigurni da želite obrisati ${docs.length} dokumenata? Ova akcija je nepovratna.
+                    </div>
+                </div>
+            `;
+        }
 
-            fetch('', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    deletedCount++;
-                    // Remove row from table
-                    const row = document.querySelector(`tr[data-doc-id="${doc.id}"]`);
-                    if (row) {
-                        row.remove();
-                    }
-                } else {
-                    errorCount++;
-                }
-
-                // Check if all requests completed
-                if (deletedCount + errorCount === docs.length) {
-                    executeBulkActionBtn.classList.remove('seup-loading');
-                    executeBulkActionBtn.disabled = false;
-
-                    if (errorCount === 0) {
-                        showMessage(`Uspješno obrisano ${deletedCount} dokumenata`, 'success');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    } else {
-                        showMessage(`Obrisano ${deletedCount} dokumenata, greška kod ${errorCount}`, 'warning');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting document:', error);
-                errorCount++;
-
-                if (deletedCount + errorCount === docs.length) {
-                    executeBulkActionBtn.classList.remove('seup-loading');
-                    executeBulkActionBtn.disabled = false;
-                    showMessage('Greška pri brisanju dokumenata', 'error');
-                }
-            });
-        });
+        deleteModal.dataset.bulkMode = 'true';
+        deleteModal.classList.add('show');
     }
 
     // PDF Preview functionality
