@@ -178,22 +178,16 @@ class Omat_Generator
                 $obj->datum_otpreme = null;
                 $obj->primatelj_naziv = null;
 
-                $sql_otp = "SELECT o.datum_otpreme, o.primatelj_naziv
-                           FROM " . MAIN_DB_PREFIX . "a_otprema o
-                           WHERE o.fk_ecm_file = " . (int)$ecm_id . "
-                           ORDER BY o.datum_otpreme DESC LIMIT 1";
+                $sql_otp = "SELECT datum_otpreme, primatelj_naziv
+                           FROM " . MAIN_DB_PREFIX . "a_otprema
+                           WHERE fk_ecm_file = " . (int)$ecm_id . "
+                           ORDER BY datum_otpreme DESC LIMIT 1";
                 $res_otp = $this->db->query($sql_otp);
 
-                if (!$res_otp) {
-                    dol_syslog("Otprema query failed for ecm_file " . $ecm_id . ": " . $this->db->lasterror(), LOG_ERR);
-                } else {
-                    $num_otp = $this->db->num_rows($res_otp);
-                    dol_syslog("Otprema query for ecm_file " . $ecm_id . " returned " . $num_otp . " rows", LOG_DEBUG);
-
+                if ($res_otp) {
                     if ($otp = $this->db->fetch_object($res_otp)) {
                         $obj->datum_otpreme = $otp->datum_otpreme;
                         $obj->primatelj_naziv = $otp->primatelj_naziv;
-                        dol_syslog("Otprema found: " . $otp->datum_otpreme . " to " . $otp->primatelj_naziv, LOG_DEBUG);
                     }
                 }
 
