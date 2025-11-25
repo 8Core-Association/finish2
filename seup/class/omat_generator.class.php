@@ -125,14 +125,25 @@ class Omat_Generator
     private function getAttachmentsList($predmet_id)
     {
         $relative_path = Predmet_helper::getPredmetFolderPath($predmet_id, $this->db);
-        
-        $sql = "SELECT 
+
+        $sql = "SELECT
                     ef.filename,
                     ef.date_c,
                     ef.label,
-                    CONCAT(u.firstname, ' ', u.lastname) as created_by
+                    ef.rowid as ecm_file_id,
+                    CONCAT(u.firstname, ' ', u.lastname) as created_by,
+                    akt.urb_broj,
+                    pr.prilog_rbr,
+                    zap.datum_zaprimanja,
+                    zap.posiljatelj_naziv,
+                    otp.datum_otpreme,
+                    otp.primatelj_naziv
                 FROM " . MAIN_DB_PREFIX . "ecm_files ef
                 LEFT JOIN " . MAIN_DB_PREFIX . "user u ON ef.fk_user_c = u.rowid
+                LEFT JOIN " . MAIN_DB_PREFIX . "a_prilozi pr ON pr.fk_ecm_file = ef.rowid
+                LEFT JOIN " . MAIN_DB_PREFIX . "a_akti akt ON pr.ID_akta = akt.ID_akta
+                LEFT JOIN " . MAIN_DB_PREFIX . "a_zaprimanja zap ON zap.fk_ecm_file = ef.rowid
+                LEFT JOIN " . MAIN_DB_PREFIX . "a_otprema otp ON otp.fk_ecm_file = ef.rowid
                 WHERE ef.filepath = '" . $this->db->escape(rtrim($relative_path, '/')) . "'
                 AND ef.entity = " . $this->conf->entity . "
                 ORDER BY ef.date_c ASC";
@@ -144,7 +155,7 @@ class Omat_Generator
                 $attachments[] = $obj;
             }
         }
-        
+
         return $attachments;
     }
 
@@ -232,45 +243,73 @@ class Omat_Generator
             return;
         }
 
-        // Table header
-        $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 12);
-        $pdf->Cell(20, 10, $this->encodeText('Rb.'), 1, 0, 'C');
-        $pdf->Cell(180, 10, $this->encodeText('Opis'), 1, 0, 'C');
-        $pdf->Cell(50, 10, $this->encodeText('Datum dodavanja'), 1, 1, 'C');
+        $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 10);
+        $pdf->Cell(15, 10, $this->encodeText('Rb.'), 1, 0, 'C');
+        $pdf->Cell(30, 10, $this->encodeText('#URB'), 1, 0, 'C');
+        $pdf->Cell(70, 10, $this->encodeText('Naziv'), 1, 0, 'C');
+        $pdf->Cell(35, 10, $this->encodeText('Datum dod.'), 1, 0, 'C');
+        $pdf->Cell(55, 10, $this->encodeText('Zaprimanje'), 1, 0, 'C');
+        $pdf->Cell(52, 10, $this->encodeText('Otprema'), 1, 1, 'C');
 
-        // Table content
-        $pdf->SetFont(pdf_getPDFFont($this->langs), '', 11);
+        $pdf->SetFont(pdf_getPDFFont($this->langs), '', 9);
         $rb = 1;
-        
+
         foreach ($attachments as $attachment) {
-            // Check if we need a new page
-            if ($pdf->GetY() > 380) { // Near bottom of A3 page
+            if ($pdf->GetY() > 380) {
                 $pdf->AddPage('P', array(297, 420));
-                
-                // Repeat header on new page
-                $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 12);
-                $pdf->Cell(20, 10, $this->encodeText('Rb.'), 1, 0, 'C');
-                $pdf->Cell(180, 10, $this->encodeText('Opis'), 1, 0, 'C');
-                $pdf->Cell(50, 10, $this->encodeText('Datum dodavanja'), 1, 1, 'C');
-                $pdf->SetFont(pdf_getPDFFont($this->langs), '', 11);
+
+                $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 10);
+                $pdf->Cell(15, 10, $this->encodeText('Rb.'), 1, 0, 'C');
+                $pdf->Cell(30, 10, $this->encodeText('#URB'), 1, 0, 'C');
+                $pdf->Cell(70, 10, $this->encodeText('Naziv'), 1, 0, 'C');
+                $pdf->Cell(35, 10, $this->encodeText('Datum dod.'), 1, 0, 'C');
+                $pdf->Cell(55, 10, $this->encodeText('Zaprimanje'), 1, 0, 'C');
+                $pdf->Cell(52, 10, $this->encodeText('Otprema'), 1, 1, 'C');
+                $pdf->SetFont(pdf_getPDFFont($this->langs), '', 9);
             }
 
             $datum_formatted = dol_print_date($attachment->date_c, '%d.%m.%Y');
-            
-            // Calculate row height based on description length
-            $desc_lines = $pdf->GetStringWidth($attachment->filename) > 170 ? 2 : 1;
-            $row_height = $desc_lines * 8;
 
-            $pdf->Cell(20, $row_height, $rb, 1, 0, 'C');
-            
-            // Multi-line description if needed
+            $row_height = 8;
+
+            $urb_text = '-';
+            if (!empty($attachment->urb_broj)) {
+                $urb_text = $attachment->urb_broj;
+                if (!empty($attachment->prilog_rbr)) {
+                    $urb_text .= '/' . $attachment->prilog_rbr;
+                }
+            }
+
+            $zaprimanje_text = '-';
+            if (!empty($attachment->datum_zaprimanja)) {
+                $zaprimanje_text = dol_print_date($attachment->datum_zaprimanja, '%d.%m.%Y');
+                if (!empty($attachment->posiljatelj_naziv)) {
+                    $zaprimanje_text .= "\n" . substr($attachment->posiljatelj_naziv, 0, 25);
+                    $row_height = 12;
+                }
+            }
+
+            $otprema_text = '-';
+            if (!empty($attachment->datum_otpreme)) {
+                $otprema_text = dol_print_date($attachment->datum_otpreme, '%d.%m.%Y');
+                if (!empty($attachment->primatelj_naziv)) {
+                    $otprema_text .= "\n" . substr($attachment->primatelj_naziv, 0, 25);
+                    $row_height = 12;
+                }
+            }
+
+            $pdf->Cell(15, $row_height, $rb, 1, 0, 'C');
+            $pdf->Cell(30, $row_height, $this->encodeText($urb_text), 1, 0, 'C');
+
             $x = $pdf->GetX();
             $y = $pdf->GetY();
-            $pdf->MultiCell(180, 8, $this->encodeText($attachment->filename), 1, 'L');
-            $pdf->SetXY($x + 180, $y);
-            
-            $pdf->Cell(50, $row_height, $datum_formatted, 1, 1, 'C');
-            
+            $pdf->MultiCell(70, 6, $this->encodeText($attachment->filename), 1, 'L');
+            $pdf->SetXY($x + 70, $y);
+
+            $pdf->Cell(35, $row_height, $datum_formatted, 1, 0, 'C');
+            $pdf->Cell(55, $row_height, $this->encodeText($zaprimanje_text), 1, 0, 'C');
+            $pdf->Cell(52, $row_height, $this->encodeText($otprema_text), 1, 1, 'C');
+
             $rb++;
         }
     }
@@ -447,18 +486,54 @@ class Omat_Generator
         } else {
             $html .= '<table class="seup-omat-table">';
             $html .= '<thead>';
-            $html .= '<tr><th>Rb.</th><th>Opis</th><th>Datum dodavanja</th></tr>';
+            $html .= '<tr>';
+            $html .= '<th>Rb.</th>';
+            $html .= '<th>#URB</th>';
+            $html .= '<th>Naziv</th>';
+            $html .= '<th>Datum dodavanja</th>';
+            $html .= '<th>Zaprimanje</th>';
+            $html .= '<th>Otprema</th>';
+            $html .= '</tr>';
             $html .= '</thead>';
             $html .= '<tbody>';
-            
+
             foreach ($attachments as $index => $attachment) {
                 $html .= '<tr>';
                 $html .= '<td>' . ($index + 1) . '</td>';
+
+                $urb_display = '-';
+                if (!empty($attachment->urb_broj)) {
+                    $urb_display = htmlspecialchars($attachment->urb_broj);
+                    if (!empty($attachment->prilog_rbr)) {
+                        $urb_display .= '/' . htmlspecialchars($attachment->prilog_rbr);
+                    }
+                }
+                $html .= '<td>' . $urb_display . '</td>';
+
                 $html .= '<td>' . htmlspecialchars($attachment->filename) . '</td>';
                 $html .= '<td>' . dol_print_date($attachment->date_c, '%d.%m.%Y') . '</td>';
+
+                $zaprimanje_display = '-';
+                if (!empty($attachment->datum_zaprimanja)) {
+                    $zaprimanje_display = dol_print_date($attachment->datum_zaprimanja, '%d.%m.%Y');
+                    if (!empty($attachment->posiljatelj_naziv)) {
+                        $zaprimanje_display .= '<br><small>' . htmlspecialchars($attachment->posiljatelj_naziv) . '</small>';
+                    }
+                }
+                $html .= '<td>' . $zaprimanje_display . '</td>';
+
+                $otprema_display = '-';
+                if (!empty($attachment->datum_otpreme)) {
+                    $otprema_display = dol_print_date($attachment->datum_otpreme, '%d.%m.%Y');
+                    if (!empty($attachment->primatelj_naziv)) {
+                        $otprema_display .= '<br><small>' . htmlspecialchars($attachment->primatelj_naziv) . '</small>';
+                    }
+                }
+                $html .= '<td>' . $otprema_display . '</td>';
+
                 $html .= '</tr>';
             }
-            
+
             $html .= '</tbody>';
             $html .= '</table>';
         }
