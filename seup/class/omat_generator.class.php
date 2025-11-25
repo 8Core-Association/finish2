@@ -131,27 +131,51 @@ class Omat_Generator
                     ef.date_c,
                     ef.label,
                     ef.rowid as ecm_file_id,
-                    CONCAT(u.firstname, ' ', u.lastname) as created_by,
-                    akt.urb_broj,
-                    pr.prilog_rbr,
-                    zap.datum_zaprimanja,
-                    zap.posiljatelj_naziv,
-                    otp.datum_otpreme,
-                    otp.primatelj_naziv
+                    CONCAT(u.firstname, ' ', u.lastname) as created_by
                 FROM " . MAIN_DB_PREFIX . "ecm_files ef
                 LEFT JOIN " . MAIN_DB_PREFIX . "user u ON ef.fk_user_c = u.rowid
-                LEFT JOIN " . MAIN_DB_PREFIX . "a_prilozi pr ON pr.fk_ecm_file = ef.rowid
-                LEFT JOIN " . MAIN_DB_PREFIX . "a_akti akt ON pr.ID_akta = akt.ID_akta
-                LEFT JOIN " . MAIN_DB_PREFIX . "a_zaprimanja zap ON zap.fk_ecm_file = ef.rowid
-                LEFT JOIN " . MAIN_DB_PREFIX . "a_otprema otp ON otp.fk_ecm_file = ef.rowid
                 WHERE ef.filepath = '" . $this->db->escape(rtrim($relative_path, '/')) . "'
                 AND ef.entity = " . $this->conf->entity . "
+                AND ef.filename NOT LIKE 'Omot_%'
                 ORDER BY ef.date_c ASC";
 
         $resql = $this->db->query($sql);
         $attachments = [];
         if ($resql) {
             while ($obj = $this->db->fetch_object($resql)) {
+                $ecm_id = $obj->ecm_file_id;
+
+                $sql_prilog = "SELECT pr.prilog_rbr, akt.urb_broj
+                              FROM " . MAIN_DB_PREFIX . "a_prilozi pr
+                              LEFT JOIN " . MAIN_DB_PREFIX . "a_akti akt ON pr.ID_akta = akt.ID_akta
+                              WHERE pr.fk_ecm_file = " . (int)$ecm_id . "
+                              LIMIT 1";
+                $res_prilog = $this->db->query($sql_prilog);
+                if ($res_prilog && $prilog = $this->db->fetch_object($res_prilog)) {
+                    $obj->urb_broj = $prilog->urb_broj;
+                    $obj->prilog_rbr = $prilog->prilog_rbr;
+                }
+
+                $sql_zap = "SELECT datum_zaprimanja, posiljatelj_naziv
+                           FROM " . MAIN_DB_PREFIX . "a_zaprimanja
+                           WHERE fk_ecm_file = " . (int)$ecm_id . "
+                           ORDER BY datum_zaprimanja DESC LIMIT 1";
+                $res_zap = $this->db->query($sql_zap);
+                if ($res_zap && $zap = $this->db->fetch_object($res_zap)) {
+                    $obj->datum_zaprimanja = $zap->datum_zaprimanja;
+                    $obj->posiljatelj_naziv = $zap->posiljatelj_naziv;
+                }
+
+                $sql_otp = "SELECT datum_otpreme, primatelj_naziv
+                           FROM " . MAIN_DB_PREFIX . "a_otprema
+                           WHERE fk_ecm_file = " . (int)$ecm_id . "
+                           ORDER BY datum_otpreme DESC LIMIT 1";
+                $res_otp = $this->db->query($sql_otp);
+                if ($res_otp && $otp = $this->db->fetch_object($res_otp)) {
+                    $obj->datum_otpreme = $otp->datum_otpreme;
+                    $obj->primatelj_naziv = $otp->primatelj_naziv;
+                }
+
                 $attachments[] = $obj;
             }
         }
