@@ -118,15 +118,18 @@ $pdf->Open();
 
 $pdf->AddPage('P', 'A4');
 
-$pdf->SetFont('', 'B', 18);
-$pdf->Cell(0, 15, dol_trunc($predmet->name_ustanova, 60), 0, 1, 'C');
+$pdf->SetFont('', 'B', 16);
+$pdf->Cell(0, 10, 'NAZIV TIJELA', 0, 1, 'L');
 
-$pdf->Ln(5);
+$pdf->SetFont('', '', 14);
+$pdf->Cell(0, 10, dol_trunc($predmet->name_ustanova, 60), 0, 1, 'L');
+
+$pdf->Ln(3);
 
 $pdf->SetFont('', 'B', 12);
-$pdf->Cell(70, 7, 'Oznaka ustrojstvene jedinice:', 0, 0, 'L');
+$pdf->Cell(0, 7, 'OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:', 0, 1, 'L');
 $pdf->SetFont('', '', 11);
-$pdf->Cell(0, 7, $predmet->interna_oznaka_naziv . ' (' . $predmet->interna_oznaka_rbr . ')', 0, 1, 'L');
+$pdf->Cell(0, 7, $predmet->interna_oznaka_rbr . ' "' . $predmet->interna_oznaka_naziv . '"', 0, 1, 'L');
 
 $pdf->SetFont('', 'B', 12);
 $pdf->Cell(70, 7, 'Klasifikacijska oznaka:', 0, 0, 'L');
@@ -168,39 +171,44 @@ foreach ($akti as $id_akta => $akt_data) {
         $page_line_count = 0;
     }
 
-    $pdf->SetFont('', 'B', 10);
-    $pdf->Cell(10, 6, '', 0, 0, 'L');
-    $pdf->Cell(0, 6, 'Akt broj: ' . $akt_broj, 0, 1, 'L');
+    $pdf->SetFont('', 'B', 11);
+    $pdf->Cell(0, 7, $akt_broj, 0, 1, 'L');
     $page_line_count++;
 
     if (!empty($akt_data['prilozi'])) {
-        $pdf->SetFont('', '', 9);
+        $pdf->SetFont('', '', 10);
         foreach ($akt_data['prilozi'] as $prilog) {
-            $pdf->Cell(20, 5, '', 0, 0, 'L');
-            $pdf->Cell(0, 5, 'Prilog rb. ' . $prilog->prilog_rbr . ': ' . $prilog->prilog_filename, 0, 1, 'L');
+            $pdf->Cell(10, 6, '', 0, 0, 'L');
+            $pdf->Cell(0, 6, '- Prilog rb: ' . $prilog->prilog_rbr, 0, 1, 'L');
             $page_line_count++;
         }
     }
 
     if (!empty($akt_data['otpreme'])) {
-        $pdf->SetFont('', 'I', 9);
+        $pdf->SetFont('', '', 10);
+        $pdf->Cell(10, 6, '', 0, 0, 'L');
+        $pdf->Cell(0, 6, '- Otpreme:', 0, 1, 'L');
+        $page_line_count++;
         foreach ($akt_data['otpreme'] as $otprema) {
-            $pdf->Cell(20, 5, '', 0, 0, 'L');
-            $pdf->Cell(0, 5, 'Otprema: ' . $otprema->primatelj_naziv . ' (' . date('d.m.Y', strtotime($otprema->datum_otpreme)) . ')', 0, 1, 'L');
+            $pdf->Cell(15, 5, '', 0, 0, 'L');
+            $pdf->Cell(0, 5, $otprema->primatelj_naziv . ' (' . date('d.m.Y', strtotime($otprema->datum_otpreme)) . ')', 0, 1, 'L');
             $page_line_count++;
         }
     }
 
     if (!empty($akt_data['zaprimanja'])) {
-        $pdf->SetFont('', 'I', 9);
+        $pdf->SetFont('', '', 10);
+        $pdf->Cell(10, 6, '', 0, 0, 'L');
+        $pdf->Cell(0, 6, '- Zaprimanja:', 0, 1, 'L');
+        $page_line_count++;
         foreach ($akt_data['zaprimanja'] as $zaprimanje) {
-            $pdf->Cell(20, 5, '', 0, 0, 'L');
-            $pdf->Cell(0, 5, 'Zaprimanje: ' . $zaprimanje->posiljatelj_naziv . ' (' . date('d.m.Y H:i', strtotime($zaprimanje->datum_zaprimanja)) . ')', 0, 1, 'L');
+            $pdf->Cell(15, 5, '', 0, 0, 'L');
+            $pdf->Cell(0, 5, $zaprimanje->posiljatelj_naziv . ' (' . date('d.m.Y H:i', strtotime($zaprimanje->datum_zaprimanja)) . ')', 0, 1, 'L');
             $page_line_count++;
         }
     }
 
-    $pdf->Ln(2);
+    $pdf->Ln(3);
     $page_line_count++;
 }
 
