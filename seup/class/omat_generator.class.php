@@ -120,82 +120,75 @@ class Omat_Generator
     }
 
     /**
-     * Get list of attachments for predmet
+     * Get list of acts with attachments, shipments and receipts for predmet
      */
     private function getAttachmentsList($predmet_id)
     {
-        $relative_path = Predmet_helper::getPredmetFolderPath($predmet_id, $this->db);
+        $akti = [];
 
-        dol_syslog("Getting attachments for predmet " . $predmet_id . ", path: " . $relative_path, LOG_DEBUG);
+        // Get all acts for this predmet
+        $sql_akti = "SELECT a.ID_akta, a.urb_broj, a.datum_kreiranja
+                     FROM " . MAIN_DB_PREFIX . "a_akti a
+                     WHERE a.ID_predmeta = " . (int)$predmet_id . "
+                     ORDER BY a.urb_broj ASC";
 
-        $test_sql = "SELECT COUNT(*) as cnt FROM " . MAIN_DB_PREFIX . "a_otprema";
-        $test_res = $this->db->query($test_sql);
-        if ($test_res) {
-            $test_obj = $this->db->fetch_object($test_res);
-            dol_syslog("Total records in a_otprema table: " . $test_obj->cnt, LOG_DEBUG);
-        }
+        $res_akti = $this->db->query($sql_akti);
+        if ($res_akti) {
+            while ($akt = $this->db->fetch_object($res_akti)) {
+                $akt_data = [
+                    'ID_akta' => $akt->ID_akta,
+                    'urb_broj' => $akt->urb_broj,
+                    'datum_kreiranja' => $akt->datum_kreiranja,
+                    'prilozi' => [],
+                    'otpreme' => [],
+                    'zaprimanja' => []
+                ];
 
-        $sql = "SELECT
-                    ef.filename,
-                    ef.date_c,
-                    ef.label,
-                    ef.rowid as ecm_file_id,
-                    CONCAT(u.firstname, ' ', u.lastname) as created_by
-                FROM " . MAIN_DB_PREFIX . "ecm_files ef
-                LEFT JOIN " . MAIN_DB_PREFIX . "user u ON ef.fk_user_c = u.rowid
-                WHERE ef.filepath = '" . $this->db->escape(rtrim($relative_path, '/')) . "'
-                AND ef.entity = " . $this->conf->entity . "
-                AND ef.filename NOT LIKE 'Omot_%'
-                ORDER BY ef.date_c ASC";
-
-        $resql = $this->db->query($sql);
-        $attachments = [];
-        if ($resql) {
-            while ($obj = $this->db->fetch_object($resql)) {
-                $ecm_id = $obj->ecm_file_id;
-
-                $sql_prilog = "SELECT pr.prilog_rbr, akt.urb_broj
-                              FROM " . MAIN_DB_PREFIX . "a_prilozi pr
-                              LEFT JOIN " . MAIN_DB_PREFIX . "a_akti akt ON pr.ID_akta = akt.ID_akta
-                              WHERE pr.fk_ecm_file = " . (int)$ecm_id . "
-                              LIMIT 1";
-                $res_prilog = $this->db->query($sql_prilog);
-                if ($res_prilog && $prilog = $this->db->fetch_object($res_prilog)) {
-                    $obj->urb_broj = $prilog->urb_broj;
-                    $obj->prilog_rbr = $prilog->prilog_rbr;
-                }
-
-                $sql_zap = "SELECT zap.datum_zaprimanja, zap.posiljatelj_naziv
-                           FROM a_zaprimanja zap
-                           WHERE zap.fk_ecm_file = " . (int)$ecm_id . "
-                           ORDER BY zap.datum_zaprimanja DESC LIMIT 1";
-                $res_zap = $this->db->query($sql_zap);
-                if ($res_zap && $zap = $this->db->fetch_object($res_zap)) {
-                    $obj->datum_zaprimanja = $zap->datum_zaprimanja;
-                    $obj->posiljatelj_naziv = $zap->posiljatelj_naziv;
-                }
-
-                $obj->datum_otpreme = null;
-                $obj->primatelj_naziv = null;
-
-                $sql_otp = "SELECT datum_otpreme, primatelj_naziv
-                           FROM " . MAIN_DB_PREFIX . "a_otprema
-                           WHERE fk_ecm_file = " . (int)$ecm_id . "
-                           ORDER BY datum_otpreme DESC LIMIT 1";
-                $res_otp = $this->db->query($sql_otp);
-
-                if ($res_otp) {
-                    if ($otp = $this->db->fetch_object($res_otp)) {
-                        $obj->datum_otpreme = $otp->datum_otpreme;
-                        $obj->primatelj_naziv = $otp->primatelj_naziv;
+                // Get prilozi for this akt
+                $sql_prilozi = "SELECT pr.prilog_rbr, pr.ID_priloga
+                               FROM " . MAIN_DB_PREFIX . "a_prilozi pr
+                               WHERE pr.ID_akta = " . (int)$akt->ID_akta . "
+                               ORDER BY pr.prilog_rbr ASC";
+                $res_prilozi = $this->db->query($sql_prilozi);
+                if ($res_prilozi) {
+                    while ($prilog = $this->db->fetch_object($res_prilozi)) {
+                        $akt_data['prilozi'][] = $prilog;
                     }
                 }
 
-                $attachments[] = $obj;
+                // Get otpreme for this akt (via fk_ecm_file from akt)
+                $sql_akt_ecm = "SELECT fk_ecm_file FROM " . MAIN_DB_PREFIX . "a_akti WHERE ID_akta = " . (int)$akt->ID_akta;
+                $res_akt_ecm = $this->db->query($sql_akt_ecm);
+                if ($res_akt_ecm && $akt_ecm = $this->db->fetch_object($res_akt_ecm)) {
+                    $sql_otpreme = "SELECT o.primatelj_naziv, o.datum_otpreme, o.nacin_otpreme
+                                   FROM " . MAIN_DB_PREFIX . "a_otprema o
+                                   WHERE o.fk_ecm_file = " . (int)$akt_ecm->fk_ecm_file . "
+                                   ORDER BY o.datum_otpreme ASC";
+                    $res_otpreme = $this->db->query($sql_otpreme);
+                    if ($res_otpreme) {
+                        while ($otprema = $this->db->fetch_object($res_otpreme)) {
+                            $akt_data['otpreme'][] = $otprema;
+                        }
+                    }
+
+                    // Get zaprimanja for this akt
+                    $sql_zaprimanja = "SELECT z.posiljatelj_naziv, z.datum_zaprimanja, z.nacin_zaprimanja
+                                      FROM llx_a_zaprimanja z
+                                      WHERE z.fk_ecm_file = " . (int)$akt_ecm->fk_ecm_file . "
+                                      ORDER BY z.datum_zaprimanja ASC";
+                    $res_zaprimanja = $this->db->query($sql_zaprimanja);
+                    if ($res_zaprimanja) {
+                        while ($zaprimanje = $this->db->fetch_object($res_zaprimanja)) {
+                            $akt_data['zaprimanja'][] = $zaprimanje;
+                        }
+                    }
+                }
+
+                $akti[] = $akt_data;
             }
         }
 
-        return $attachments;
+        return $akti;
     }
 
     /**
@@ -218,9 +211,9 @@ class Omat_Generator
         $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 16);
         
         // Naziv tjela
-        $pdf->Cell(0, 15, $this->encodeText('NAZIV TIJELA:'), 0, 1, 'L');
+        $pdf->Cell(0, 15, $this->encodeText('NAZIV TIJELA'), 0, 1, 'L');
         $pdf->SetFont(pdf_getPDFFont($this->langs), '', 14);
-        $naziv_tjela = $this->encodeText($predmetData->name_ustanova . ' (' . $predmetData->code_ustanova . ')');
+        $naziv_tjela = $this->encodeText($predmetData->name_ustanova);
         $pdf->Cell(0, 12, $naziv_tjela, 0, 1, 'L');
         $pdf->Ln(10);
 
@@ -228,7 +221,7 @@ class Omat_Generator
         $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 16);
         $pdf->Cell(0, 15, $this->encodeText('OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:'), 0, 1, 'L');
         $pdf->SetFont(pdf_getPDFFont($this->langs), '', 14);
-        $unutarnja_oznaka = $this->encodeText($predmetData->ime_prezime . ' (' . $predmetData->korisnik_rbr . ') - ' . $predmetData->radno_mjesto);
+        $unutarnja_oznaka = $this->encodeText($predmetData->korisnik_rbr . ' "' . $predmetData->radno_mjesto . '"');
         $pdf->Cell(0, 12, $unutarnja_oznaka, 0, 1, 'L');
         $pdf->Ln(10);
 
@@ -264,92 +257,90 @@ class Omat_Generator
     }
 
     /**
-     * Generate pages 2 and 3 - Attachments list
+     * Generate pages 2 and 3 - Acts list with attachments, shipments and receipts
      */
-    private function generatePage2and3($pdf, $attachments)
+    private function generatePage2and3($pdf, $akti)
     {
-        // Add new page for attachments
+        // Add new page for content
         $pdf->AddPage('P', array(297, 420));
-        
+
         // Title
         $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 20);
-        $pdf->Cell(0, 15, $this->encodeText('POPIS PRIVITAKA'), 0, 1, 'C');
+        $pdf->Cell(0, 15, $this->encodeText('POPIS SADRŽAJA'), 0, 1, 'C');
         $pdf->Ln(10);
 
-        if (empty($attachments)) {
+        if (empty($akti)) {
             $pdf->SetFont(pdf_getPDFFont($this->langs), 'I', 14);
-            $pdf->Cell(0, 12, $this->encodeText('Nema privitaka'), 0, 1, 'C');
+            $pdf->Cell(0, 12, $this->encodeText('Nema akata'), 0, 1, 'C');
             return;
         }
 
-        $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 10);
-        $pdf->Cell(15, 10, $this->encodeText('Rb.'), 1, 0, 'C');
-        $pdf->Cell(30, 10, $this->encodeText('#URB'), 1, 0, 'C');
-        $pdf->Cell(70, 10, $this->encodeText('Naziv'), 1, 0, 'C');
-        $pdf->Cell(35, 10, $this->encodeText('Datum dod.'), 1, 0, 'C');
-        $pdf->Cell(55, 10, $this->encodeText('Zaprimanje'), 1, 0, 'C');
-        $pdf->Cell(52, 10, $this->encodeText('Otprema'), 1, 1, 'C');
+        // Get predmet data for building akt number
+        $predmet_id = 0;
+        if (!empty($akti)) {
+            $sql_predmet = "SELECT p.ID_predmeta, u.code_ustanova, io.rbr as korisnik_rbr, p.godina
+                           FROM " . MAIN_DB_PREFIX . "a_akti a
+                           LEFT JOIN " . MAIN_DB_PREFIX . "a_predmet p ON a.ID_predmeta = p.ID_predmeta
+                           LEFT JOIN " . MAIN_DB_PREFIX . "a_oznaka_ustanove u ON p.ID_ustanove = u.ID_ustanove
+                           LEFT JOIN " . MAIN_DB_PREFIX . "a_interna_oznaka_korisnika io ON p.ID_interna_oznaka_korisnika = io.ID
+                           WHERE a.ID_akta = " . (int)$akti[0]['ID_akta'];
+            $res_predmet = $this->db->query($sql_predmet);
+            if ($res_predmet && $predmet_obj = $this->db->fetch_object($res_predmet)) {
+                $code_ustanova = $predmet_obj->code_ustanova;
+                $korisnik_rbr = $predmet_obj->korisnik_rbr;
+                $godina = $predmet_obj->godina;
+            }
+        }
 
-        $pdf->SetFont(pdf_getPDFFont($this->langs), '', 9);
-        $rb = 1;
+        $pdf->SetFont(pdf_getPDFFont($this->langs), '', 11);
 
-        foreach ($attachments as $attachment) {
+        foreach ($akti as $akt_data) {
+            // Check if we need a new page
             if ($pdf->GetY() > 380) {
                 $pdf->AddPage('P', array(297, 420));
-
-                $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 10);
-                $pdf->Cell(15, 10, $this->encodeText('Rb.'), 1, 0, 'C');
-                $pdf->Cell(30, 10, $this->encodeText('#URB'), 1, 0, 'C');
-                $pdf->Cell(70, 10, $this->encodeText('Naziv'), 1, 0, 'C');
-                $pdf->Cell(35, 10, $this->encodeText('Datum dod.'), 1, 0, 'C');
-                $pdf->Cell(55, 10, $this->encodeText('Zaprimanje'), 1, 0, 'C');
-                $pdf->Cell(52, 10, $this->encodeText('Otprema'), 1, 1, 'C');
-                $pdf->SetFont(pdf_getPDFFont($this->langs), '', 9);
             }
 
-            $datum_formatted = dol_print_date($attachment->date_c, '%d.%m.%Y');
+            // Format akt number: [Ustanova]-[Zaposlenik]-[Godina]-[Akt]
+            $akt_broj = $code_ustanova . '-' . $korisnik_rbr . '-' . $godina . '-' . $akt_data['urb_broj'];
 
-            $row_height = 8;
+            // Print akt number (bold)
+            $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 12);
+            $pdf->Cell(0, 8, $this->encodeText($akt_broj), 0, 1, 'L');
 
-            $urb_text = '-';
-            if (!empty($attachment->urb_broj)) {
-                $urb_text = $attachment->urb_broj;
-                if (!empty($attachment->prilog_rbr)) {
-                    $urb_text .= '/' . $attachment->prilog_rbr;
+            $pdf->SetFont(pdf_getPDFFont($this->langs), '', 10);
+
+            // Print prilozi
+            if (!empty($akt_data['prilozi'])) {
+                foreach ($akt_data['prilozi'] as $prilog) {
+                    $pdf->Cell(10, 6, '', 0, 0, 'L');
+                    $pdf->Cell(0, 6, $this->encodeText('- Prilog rb: ' . $prilog->prilog_rbr), 0, 1, 'L');
                 }
             }
 
-            $zaprimanje_text = '-';
-            if (!empty($attachment->datum_zaprimanja)) {
-                $zaprimanje_text = dol_print_date($attachment->datum_zaprimanja, '%d.%m.%Y');
-                if (!empty($attachment->posiljatelj_naziv)) {
-                    $zaprimanje_text .= "\n" . substr($attachment->posiljatelj_naziv, 0, 25);
-                    $row_height = 12;
+            // Print otpreme
+            if (!empty($akt_data['otpreme'])) {
+                $pdf->Cell(10, 6, '', 0, 0, 'L');
+                $pdf->Cell(0, 6, $this->encodeText('- Otpreme:'), 0, 1, 'L');
+                foreach ($akt_data['otpreme'] as $otprema) {
+                    $pdf->Cell(15, 5, '', 0, 0, 'L');
+                    $datum_otp = dol_print_date($otprema->datum_otpreme, '%d.%m.%Y');
+                    $pdf->Cell(0, 5, $this->encodeText($otprema->primatelj_naziv . ' (' . $datum_otp . ')'), 0, 1, 'L');
                 }
             }
 
-            $otprema_text = '-';
-            if (!empty($attachment->datum_otpreme)) {
-                $otprema_text = dol_print_date($attachment->datum_otpreme, '%d.%m.%Y');
-                if (!empty($attachment->primatelj_naziv)) {
-                    $otprema_text .= "\n" . substr($attachment->primatelj_naziv, 0, 25);
-                    $row_height = 12;
+            // Print zaprimanja
+            if (!empty($akt_data['zaprimanja'])) {
+                $pdf->Cell(10, 6, '', 0, 0, 'L');
+                $pdf->Cell(0, 6, $this->encodeText('- Zaprimanja:'), 0, 1, 'L');
+                foreach ($akt_data['zaprimanja'] as $zaprimanje) {
+                    $pdf->Cell(15, 5, '', 0, 0, 'L');
+                    $datum_zap = dol_print_date($zaprimanje->datum_zaprimanja, '%d.%m.%Y %H:%M');
+                    $pdf->Cell(0, 5, $this->encodeText($zaprimanje->posiljatelj_naziv . ' (' . $datum_zap . ')'), 0, 1, 'L');
                 }
             }
 
-            $pdf->Cell(15, $row_height, $rb, 1, 0, 'C');
-            $pdf->Cell(30, $row_height, $this->encodeText($urb_text), 1, 0, 'C');
-
-            $x = $pdf->GetX();
-            $y = $pdf->GetY();
-            $pdf->MultiCell(70, 6, $this->encodeText($attachment->filename), 1, 'L');
-            $pdf->SetXY($x + 70, $y);
-
-            $pdf->Cell(35, $row_height, $datum_formatted, 1, 0, 'C');
-            $pdf->Cell(55, $row_height, $this->encodeText($zaprimanje_text), 1, 0, 'C');
-            $pdf->Cell(52, $row_height, $this->encodeText($otprema_text), 1, 1, 'C');
-
-            $rb++;
+            // Add spacing between acts
+            $pdf->Ln(4);
         }
     }
 
@@ -486,13 +477,13 @@ class Omat_Generator
         $html .= '<h3 class="seup-omat-title">OMOT SPISA</h3>';
         
         $html .= '<div class="seup-omat-section">';
-        $html .= '<h4>NAZIV TIJELA:</h4>';
-        $html .= '<p>' . htmlspecialchars($predmetData->name_ustanova . ' (' . $predmetData->code_ustanova . ')') . '</p>';
+        $html .= '<h4>NAZIV TIJELA</h4>';
+        $html .= '<p>' . htmlspecialchars($predmetData->name_ustanova) . '</p>';
         $html .= '</div>';
-        
+
         $html .= '<div class="seup-omat-section">';
         $html .= '<h4>OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:</h4>';
-        $html .= '<p>' . htmlspecialchars($predmetData->ime_prezime . ' (' . $predmetData->korisnik_rbr . ') - ' . $predmetData->radno_mjesto) . '</p>';
+        $html .= '<p>' . htmlspecialchars($predmetData->korisnik_rbr . ' "' . $predmetData->radno_mjesto . '"') . '</p>';
         $html .= '</div>';
         
         $html .= '<div class="seup-omat-section">';
@@ -516,65 +507,67 @@ class Omat_Generator
         
         $html .= '</div>'; // seup-omat-page
         
-        // Attachments preview
+        // Acts list preview
         $html .= '<div class="seup-omat-page">';
-        $html .= '<h3 class="seup-omat-title">POPIS PRIVITAKA</h3>';
-        
+        $html .= '<h3 class="seup-omat-title">POPIS SADRŽAJA</h3>';
+
         if (empty($attachments)) {
-            $html .= '<p class="seup-omat-empty">Nema privitaka</p>';
+            $html .= '<p class="seup-omat-empty">Nema akata</p>';
         } else {
-            $html .= '<table class="seup-omat-table">';
-            $html .= '<thead>';
-            $html .= '<tr>';
-            $html .= '<th>Rb.</th>';
-            $html .= '<th>#URB</th>';
-            $html .= '<th>Naziv</th>';
-            $html .= '<th>Datum dodavanja</th>';
-            $html .= '<th>Zaprimanje</th>';
-            $html .= '<th>Otprema</th>';
-            $html .= '</tr>';
-            $html .= '</thead>';
-            $html .= '<tbody>';
-
-            foreach ($attachments as $index => $attachment) {
-                $html .= '<tr>';
-                $html .= '<td>' . ($index + 1) . '</td>';
-
-                $urb_display = '-';
-                if (!empty($attachment->urb_broj)) {
-                    $urb_display = htmlspecialchars($attachment->urb_broj);
-                    if (!empty($attachment->prilog_rbr)) {
-                        $urb_display .= '/' . htmlspecialchars($attachment->prilog_rbr);
-                    }
+            // Get code_ustanova, korisnik_rbr, godina for akt numbering
+            $code_ustanova = '';
+            $korisnik_rbr = '';
+            $godina = '';
+            if (!empty($attachments)) {
+                $sql_predmet = "SELECT u.code_ustanova, io.rbr as korisnik_rbr, p.godina
+                               FROM " . MAIN_DB_PREFIX . "a_akti a
+                               LEFT JOIN " . MAIN_DB_PREFIX . "a_predmet p ON a.ID_predmeta = p.ID_predmeta
+                               LEFT JOIN " . MAIN_DB_PREFIX . "a_oznaka_ustanove u ON p.ID_ustanove = u.ID_ustanove
+                               LEFT JOIN " . MAIN_DB_PREFIX . "a_interna_oznaka_korisnika io ON p.ID_interna_oznaka_korisnika = io.ID
+                               WHERE a.ID_akta = " . (int)$attachments[0]['ID_akta'];
+                $res_predmet = $this->db->query($sql_predmet);
+                if ($res_predmet && $predmet_obj = $this->db->fetch_object($res_predmet)) {
+                    $code_ustanova = $predmet_obj->code_ustanova;
+                    $korisnik_rbr = $predmet_obj->korisnik_rbr;
+                    $godina = $predmet_obj->godina;
                 }
-                $html .= '<td>' . $urb_display . '</td>';
-
-                $html .= '<td>' . htmlspecialchars($attachment->filename) . '</td>';
-                $html .= '<td>' . dol_print_date($attachment->date_c, '%d.%m.%Y') . '</td>';
-
-                $zaprimanje_display = '-';
-                if (!empty($attachment->datum_zaprimanja)) {
-                    $zaprimanje_display = dol_print_date($attachment->datum_zaprimanja, '%d.%m.%Y');
-                    if (!empty($attachment->posiljatelj_naziv)) {
-                        $zaprimanje_display .= '<br><small>' . htmlspecialchars($attachment->posiljatelj_naziv) . '</small>';
-                    }
-                }
-                $html .= '<td>' . $zaprimanje_display . '</td>';
-
-                $otprema_display = '-';
-                if (!empty($attachment->datum_otpreme)) {
-                    $otprema_display = dol_print_date($attachment->datum_otpreme, '%d.%m.%Y');
-                    if (!empty($attachment->primatelj_naziv)) {
-                        $otprema_display .= '<br><small>' . htmlspecialchars($attachment->primatelj_naziv) . '</small>';
-                    }
-                }
-                $html .= '<td>' . $otprema_display . '</td>';
-
-                $html .= '</tr>';
             }
 
-            $html .= '</tbody>';
-            $html .= '</table>';
+            $html .= '<div class="seup-omat-acts-list">';
+            foreach ($attachments as $akt_data) {
+                $akt_broj = $code_ustanova . '-' . $korisnik_rbr . '-' . $godina . '-' . $akt_data['urb_broj'];
+
+                $html .= '<div class="seup-omat-akt">';
+                $html .= '<strong>' . htmlspecialchars($akt_broj) . '</strong><br>';
+
+                // Prilozi
+                if (!empty($akt_data['prilozi'])) {
+                    foreach ($akt_data['prilozi'] as $prilog) {
+                        $html .= '<div style="margin-left: 20px;">- Prilog rb: ' . htmlspecialchars($prilog->prilog_rbr) . '</div>';
+                    }
+                }
+
+                // Otpreme
+                if (!empty($akt_data['otpreme'])) {
+                    $html .= '<div style="margin-left: 20px;">- Otpreme:</div>';
+                    foreach ($akt_data['otpreme'] as $otprema) {
+                        $datum_otp = dol_print_date($otprema->datum_otpreme, '%d.%m.%Y');
+                        $html .= '<div style="margin-left: 35px;">' . htmlspecialchars($otprema->primatelj_naziv) . ' (' . $datum_otp . ')</div>';
+                    }
+                }
+
+                // Zaprimanja
+                if (!empty($akt_data['zaprimanja'])) {
+                    $html .= '<div style="margin-left: 20px;">- Zaprimanja:</div>';
+                    foreach ($akt_data['zaprimanja'] as $zaprimanje) {
+                        $datum_zap = dol_print_date($zaprimanje->datum_zaprimanja, '%d.%m.%Y %H:%M');
+                        $html .= '<div style="margin-left: 35px;">' . htmlspecialchars($zaprimanje->posiljatelj_naziv) . ' (' . $datum_zap . ')</div>';
+                    }
+                }
+
+                $html .= '</div><br>';
+            }
+            $html .= '</div>';
         }
         
         $html .= '</div>'; // seup-omat-page
