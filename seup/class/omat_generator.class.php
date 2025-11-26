@@ -98,7 +98,7 @@ class Omat_Generator
                     u.code_ustanova,
                     k.ime_prezime,
                     k.rbr as korisnik_rbr,
-                    k.naziv as radno_mjesto,
+                    k.naziv as naziv_interne_oznake,
                     ko.opis_klasifikacijske_oznake,
                     ko.vrijeme_cuvanja
                 FROM " . MAIN_DB_PREFIX . "a_predmet p
@@ -127,7 +127,7 @@ class Omat_Generator
         $akti = [];
 
         // Get all acts for this predmet
-        $sql_akti = "SELECT a.ID_akta, a.urb_broj, a.datum_kreiranja
+        $sql_akti = "SELECT a.ID_akta, a.urb_broj, a.datum_kreiranja, a.fk_ecm_file
                      FROM " . MAIN_DB_PREFIX . "a_akti a
                      WHERE a.ID_predmeta = " . (int)$predmet_id . "
                      ORDER BY a.urb_broj ASC";
@@ -145,24 +145,55 @@ class Omat_Generator
                 ];
 
                 // Get prilozi for this akt
-                $sql_prilozi = "SELECT pr.prilog_rbr, pr.ID_priloga
+                $sql_prilozi = "SELECT pr.prilog_rbr, pr.ID_priloga, pr.fk_ecm_file
                                FROM " . MAIN_DB_PREFIX . "a_prilozi pr
                                WHERE pr.ID_akta = " . (int)$akt->ID_akta . "
                                ORDER BY pr.prilog_rbr ASC";
                 $res_prilozi = $this->db->query($sql_prilozi);
                 if ($res_prilozi) {
                     while ($prilog = $this->db->fetch_object($res_prilozi)) {
-                        $akt_data['prilozi'][] = $prilog;
+                        $prilog_data = [
+                            'prilog_rbr' => $prilog->prilog_rbr,
+                            'ID_priloga' => $prilog->ID_priloga,
+                            'otpreme' => [],
+                            'zaprimanja' => []
+                        ];
+
+                        // Get otpreme for this prilog
+                        if ($prilog->fk_ecm_file) {
+                            $sql_otp_prilog = "SELECT o.primatelj_naziv, o.datum_otpreme, o.nacin_otpreme
+                                              FROM " . MAIN_DB_PREFIX . "a_otprema o
+                                              WHERE o.fk_ecm_file = " . (int)$prilog->fk_ecm_file . "
+                                              ORDER BY o.datum_otpreme ASC";
+                            $res_otp_prilog = $this->db->query($sql_otp_prilog);
+                            if ($res_otp_prilog) {
+                                while ($otp = $this->db->fetch_object($res_otp_prilog)) {
+                                    $prilog_data['otpreme'][] = $otp;
+                                }
+                            }
+
+                            // Get zaprimanja for this prilog
+                            $sql_zap_prilog = "SELECT z.posiljatelj_naziv, z.datum_zaprimanja, z.nacin_zaprimanja
+                                              FROM llx_a_zaprimanja z
+                                              WHERE z.fk_ecm_file = " . (int)$prilog->fk_ecm_file . "
+                                              ORDER BY z.datum_zaprimanja ASC";
+                            $res_zap_prilog = $this->db->query($sql_zap_prilog);
+                            if ($res_zap_prilog) {
+                                while ($zap = $this->db->fetch_object($res_zap_prilog)) {
+                                    $prilog_data['zaprimanja'][] = $zap;
+                                }
+                            }
+                        }
+
+                        $akt_data['prilozi'][] = $prilog_data;
                     }
                 }
 
-                // Get otpreme for this akt (via fk_ecm_file from akt)
-                $sql_akt_ecm = "SELECT fk_ecm_file FROM " . MAIN_DB_PREFIX . "a_akti WHERE ID_akta = " . (int)$akt->ID_akta;
-                $res_akt_ecm = $this->db->query($sql_akt_ecm);
-                if ($res_akt_ecm && $akt_ecm = $this->db->fetch_object($res_akt_ecm)) {
+                // Get otpreme for this akt
+                if ($akt->fk_ecm_file) {
                     $sql_otpreme = "SELECT o.primatelj_naziv, o.datum_otpreme, o.nacin_otpreme
                                    FROM " . MAIN_DB_PREFIX . "a_otprema o
-                                   WHERE o.fk_ecm_file = " . (int)$akt_ecm->fk_ecm_file . "
+                                   WHERE o.fk_ecm_file = " . (int)$akt->fk_ecm_file . "
                                    ORDER BY o.datum_otpreme ASC";
                     $res_otpreme = $this->db->query($sql_otpreme);
                     if ($res_otpreme) {
@@ -174,7 +205,7 @@ class Omat_Generator
                     // Get zaprimanja for this akt
                     $sql_zaprimanja = "SELECT z.posiljatelj_naziv, z.datum_zaprimanja, z.nacin_zaprimanja
                                       FROM llx_a_zaprimanja z
-                                      WHERE z.fk_ecm_file = " . (int)$akt_ecm->fk_ecm_file . "
+                                      WHERE z.fk_ecm_file = " . (int)$akt->fk_ecm_file . "
                                       ORDER BY z.datum_zaprimanja ASC";
                     $res_zaprimanja = $this->db->query($sql_zaprimanja);
                     if ($res_zaprimanja) {
@@ -221,7 +252,7 @@ class Omat_Generator
         $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 16);
         $pdf->Cell(0, 15, $this->encodeText('OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:'), 0, 1, 'L');
         $pdf->SetFont(pdf_getPDFFont($this->langs), '', 14);
-        $unutarnja_oznaka = $this->encodeText($predmetData->korisnik_rbr . ' "' . $predmetData->radno_mjesto . '"');
+        $unutarnja_oznaka = $this->encodeText($predmetData->korisnik_rbr . ' "' . $predmetData->naziv_interne_oznake . '"');
         $pdf->Cell(0, 12, $unutarnja_oznaka, 0, 1, 'L');
         $pdf->Ln(10);
 
@@ -313,11 +344,33 @@ class Omat_Generator
             if (!empty($akt_data['prilozi'])) {
                 foreach ($akt_data['prilozi'] as $prilog) {
                     $pdf->Cell(10, 6, '', 0, 0, 'L');
-                    $pdf->Cell(0, 6, $this->encodeText('- Prilog rb: ' . $prilog->prilog_rbr), 0, 1, 'L');
+                    $pdf->Cell(0, 6, $this->encodeText('- Prilog rb: ' . $prilog['prilog_rbr']), 0, 1, 'L');
+
+                    // Print otpreme for this prilog
+                    if (!empty($prilog['otpreme'])) {
+                        $pdf->Cell(15, 5, '', 0, 0, 'L');
+                        $pdf->Cell(0, 5, $this->encodeText('Otpreme:'), 0, 1, 'L');
+                        foreach ($prilog['otpreme'] as $otp) {
+                            $pdf->Cell(20, 4, '', 0, 0, 'L');
+                            $datum_otp = dol_print_date($otp->datum_otpreme, '%d.%m.%Y');
+                            $pdf->Cell(0, 4, $this->encodeText($otp->primatelj_naziv . ' (' . $datum_otp . ')'), 0, 1, 'L');
+                        }
+                    }
+
+                    // Print zaprimanja for this prilog
+                    if (!empty($prilog['zaprimanja'])) {
+                        $pdf->Cell(15, 5, '', 0, 0, 'L');
+                        $pdf->Cell(0, 5, $this->encodeText('Zaprimanja:'), 0, 1, 'L');
+                        foreach ($prilog['zaprimanja'] as $zap) {
+                            $pdf->Cell(20, 4, '', 0, 0, 'L');
+                            $datum_zap = dol_print_date($zap->datum_zaprimanja, '%d.%m.%Y %H:%M');
+                            $pdf->Cell(0, 4, $this->encodeText($zap->posiljatelj_naziv . ' (' . $datum_zap . ')'), 0, 1, 'L');
+                        }
+                    }
                 }
             }
 
-            // Print otpreme
+            // Print otpreme for akt
             if (!empty($akt_data['otpreme'])) {
                 $pdf->Cell(10, 6, '', 0, 0, 'L');
                 $pdf->Cell(0, 6, $this->encodeText('- Otpreme:'), 0, 1, 'L');
@@ -328,7 +381,7 @@ class Omat_Generator
                 }
             }
 
-            // Print zaprimanja
+            // Print zaprimanja for akt
             if (!empty($akt_data['zaprimanja'])) {
                 $pdf->Cell(10, 6, '', 0, 0, 'L');
                 $pdf->Cell(0, 6, $this->encodeText('- Zaprimanja:'), 0, 1, 'L');
@@ -483,7 +536,7 @@ class Omat_Generator
 
         $html .= '<div class="seup-omat-section">';
         $html .= '<h4>OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:</h4>';
-        $html .= '<p>' . htmlspecialchars($predmetData->korisnik_rbr . ' "' . $predmetData->radno_mjesto . '"') . '</p>';
+        $html .= '<p>' . htmlspecialchars($predmetData->korisnik_rbr . ' "' . $predmetData->naziv_interne_oznake . '"') . '</p>';
         $html .= '</div>';
         
         $html .= '<div class="seup-omat-section">';
@@ -543,11 +596,29 @@ class Omat_Generator
                 // Prilozi
                 if (!empty($akt_data['prilozi'])) {
                     foreach ($akt_data['prilozi'] as $prilog) {
-                        $html .= '<div style="margin-left: 20px;">- Prilog rb: ' . htmlspecialchars($prilog->prilog_rbr) . '</div>';
+                        $html .= '<div style="margin-left: 20px;">- Prilog rb: ' . htmlspecialchars($prilog['prilog_rbr']) . '</div>';
+
+                        // Otpreme za prilog
+                        if (!empty($prilog['otpreme'])) {
+                            $html .= '<div style="margin-left: 35px;">Otpreme:</div>';
+                            foreach ($prilog['otpreme'] as $otp) {
+                                $datum_otp = dol_print_date($otp->datum_otpreme, '%d.%m.%Y');
+                                $html .= '<div style="margin-left: 50px;">' . htmlspecialchars($otp->primatelj_naziv) . ' (' . $datum_otp . ')</div>';
+                            }
+                        }
+
+                        // Zaprimanja za prilog
+                        if (!empty($prilog['zaprimanja'])) {
+                            $html .= '<div style="margin-left: 35px;">Zaprimanja:</div>';
+                            foreach ($prilog['zaprimanja'] as $zap) {
+                                $datum_zap = dol_print_date($zap->datum_zaprimanja, '%d.%m.%Y %H:%M');
+                                $html .= '<div style="margin-left: 50px;">' . htmlspecialchars($zap->posiljatelj_naziv) . ' (' . $datum_zap . ')</div>';
+                            }
+                        }
                     }
                 }
 
-                // Otpreme
+                // Otpreme za akt
                 if (!empty($akt_data['otpreme'])) {
                     $html .= '<div style="margin-left: 20px;">- Otpreme:</div>';
                     foreach ($akt_data['otpreme'] as $otprema) {
@@ -556,7 +627,7 @@ class Omat_Generator
                     }
                 }
 
-                // Zaprimanja
+                // Zaprimanja za akt
                 if (!empty($akt_data['zaprimanja'])) {
                     $html .= '<div style="margin-left: 20px;">- Zaprimanja:</div>';
                     foreach ($akt_data['zaprimanja'] as $zaprimanje) {
