@@ -54,8 +54,8 @@ class Omat_Generator
             $pdf = pdf_getInstance();
             $pdf->SetFont(pdf_getPDFFont($this->langs), '', 12);
             
-            // Set A3 format (297 x 420 mm)
-            $pdf->AddPage('P', array(297, 420));
+            // Set A3 format (297 x 420 mm) in LANDSCAPE orientation
+            $pdf->AddPage('L', array(297, 420));
             
             // Generate content
             $this->generatePage1($pdf, $predmetData);
@@ -97,8 +97,7 @@ class Omat_Generator
                     u.name_ustanova,
                     u.code_ustanova,
                     k.ime_prezime,
-                    k.rbr as korisnik_rbr,
-                    k.naziv as naziv_interne_oznake,
+                    u.code_ustanova as oznaka_ustanove,
                     ko.opis_klasifikacijske_oznake,
                     ko.vrijeme_cuvanja
                 FROM " . MAIN_DB_PREFIX . "a_predmet p
@@ -252,7 +251,7 @@ class Omat_Generator
         $pdf->SetFont(pdf_getPDFFont($this->langs), 'B', 16);
         $pdf->Cell(0, 15, $this->encodeText('OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:'), 0, 1, 'L');
         $pdf->SetFont(pdf_getPDFFont($this->langs), '', 14);
-        $unutarnja_oznaka = $this->encodeText($predmetData->korisnik_rbr . ' "' . $predmetData->naziv_interne_oznake . '"');
+        $unutarnja_oznaka = $this->encodeText($predmetData->oznaka_ustanove);
         $pdf->Cell(0, 12, $unutarnja_oznaka, 0, 1, 'L');
         $pdf->Ln(10);
 
@@ -536,7 +535,7 @@ class Omat_Generator
 
         $html .= '<div class="seup-omat-section">';
         $html .= '<h4>OZNAKA UNUTARNJE USTROJSTVENE JEDINICE:</h4>';
-        $html .= '<p>' . htmlspecialchars($predmetData->korisnik_rbr . ' "' . $predmetData->naziv_interne_oznake . '"') . '</p>';
+        $html .= '<p>' . htmlspecialchars($predmetData->oznaka_ustanove) . '</p>';
         $html .= '</div>';
         
         $html .= '<div class="seup-omat-section">';
